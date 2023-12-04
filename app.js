@@ -1,20 +1,19 @@
-const express = require('express');
-const app = express();
-const port = 3000;
+const pathToModules = "./other-backend/node_modules/"
+
+const { PrismaClient } = require( pathToModules + '@prisma/client')
+const express = require(pathToModules + 'express');
+const multer = require(pathToModules + 'multer');
+const session = require(pathToModules + 'express-session');
 
 const url = require('url');
 
-const fs = require('fs');
-
-const multer = require('multer');
-const upload = multer({ dest: 'img/' });
-
-// Prisma
-const { PrismaClient } = require('@prisma/client')
-
 const prisma = new PrismaClient()
+const app = express();
+const port = 3000;
+const upload = multer({ dest: 'uploads/' });
 
 async function main() {
+
 }
 
 main()
@@ -26,3 +25,94 @@ main()
     await prisma.$disconnect()
     process.exit(1)
 })
+
+app.use(express.static(__dirname));
+
+app.use(session({
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: true
+}))
+function isAuthenticated (req, res, next) {
+    if (req.session.user) next()
+    else res.redirect('/html/signIn.html')
+}
+
+app.post('/signUp', express.urlencoded({ extended: false }), async (req, res) => {
+    console.log(req.body);
+    const formData = req.body; // request.body, ta info från just den client request i <body> html (form)
+
+    // Skapa ett nytt user med form datan och in i 'Users' tabellen med create metoden
+    try {
+      const newUser = await prisma.user.create({
+        data: {
+          userName: formData['usernameInput'],
+          password: formData['passwordInput'],
+          role: formData['roleInput']
+        },
+      });
+  
+      res.redirect('/');
+    } catch (error) {
+      console.error('Error (skapa):', error);
+      res.status(500).send('Error (skapa)');
+    }
+});
+app.post('/signIn', express.urlencoded({ extended: false }), async(req, res) => {
+    const formData = req.body;
+    console.log(formData)
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: {
+                userName: formData['usernameInput']
+            }
+        })
+        if (user && user.password === formData['passwordInput']) {
+            console.log('User authenticated');
+            req.session.regenerate(function (err) {
+                if (err) next(err)
+            
+                req.session.user = user;
+            
+                req.session.save(function (err) {
+                  if (err) return next(err)
+                  console.log('Session saved'); 
+                  res.redirect('/')
+                })
+              })
+        }
+    }
+    catch (error) {
+        console.error('Error (search):', error);
+        res.status(500).send('Error (search)');
+    }
+});
+app.get('/', isAuthenticated, (req, res) => {
+    res.sendFile(__dirname + '/html/index.html');
+    //signedIn ? res.sendFile(__dirname + '/html/index.html') : res.redirect('/signIn.html')
+});
+app.get('/signIn.html', (req, res) => {
+    res.sendFile(__dirname + '/html/signIn.html');
+});
+app.get('/signUp.html', (req, res) => {
+    res.sendFile(__dirname + '/html/signUp.html');
+});
+app.get('/post.html', (req, res) => {
+    res.sendFile(__dirname + '/html/post.html');
+});
+
+app.get('/signOut', (req, res) => {
+    req.session.user = null
+    req.session.save(function (err) {
+      if (err) next(err)
+      req.session.regenerate(function (err) {
+        if (err) next(err)
+        res.redirect('/')
+      })
+    })
+});
+
+app.listen(port, () => {
+    console.log(`Server is listening at http://localhost:${port}`);
+});
