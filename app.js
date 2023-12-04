@@ -99,9 +99,28 @@ app.post('/signIn', express.urlencoded({ extended: false }), async(req, res) => 
         res.status(500).send('Error (search)');
     }
 });
+
+app.post('/createPost', upload.single('image'), express.urlencoded({ extended: false }), async (req, res) => {
+    console.log(req.body);
+    const formData = req.body;
+    try {
+        const newPost = await prisma.post.create({
+            data: {
+            title: formData['titleInput'],
+            content: formData['descriptionInput'],
+            image: req.file ? req.file.filename : '',
+            authorId: req.session.user.id
+        },
+        });
+        res.redirect('/')
+    } catch (error) {
+      console.error('Error 500:', error);
+      res.status(500).send('Error (skapa)');
+    }
+});
+
 app.get('/', isAuthenticated, (req, res) => {
     res.sendFile(__dirname + '/html/index.html');
-    //signedIn ? res.sendFile(__dirname + '/html/index.html') : res.redirect('/signIn.html')
 });
 app.get('/signIn', (req, res) => {
     res.sendFile(__dirname + '/html/signIn.html');
@@ -110,7 +129,7 @@ app.get('/signUp', (req, res) => {
     res.sendFile(__dirname + '/html/signUp.html');
 });
 app.get('/admin', (req, res) => {
-    res.sendFile(__dirname + '/html/admin.html');
+    req.session.user.role === 'Admin' ? res.sendFile(__dirname + '/html/admin.html'): res.redirect('/');
 });
 
 app.get('/signOut', (req, res) => {
