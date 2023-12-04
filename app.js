@@ -35,24 +35,35 @@ app.use(session({
 }))
 function isAuthenticated (req, res, next) {
     if (req.session.user) next()
-    else res.redirect('/html/signIn.html')
+    else res.redirect('/signIn')
 }
 
 app.post('/signUp', express.urlencoded({ extended: false }), async (req, res) => {
     console.log(req.body);
-    const formData = req.body; // request.body, ta info från just den client request i <body> html (form)
+    const formData = req.body;
 
-    // Skapa ett nytt user med form datan och in i 'Users' tabellen med create metoden
     try {
-      const newUser = await prisma.user.create({
-        data: {
-          userName: formData['usernameInput'],
-          password: formData['passwordInput'],
-          role: formData['roleInput']
-        },
-      });
-  
-      res.redirect('/');
+        const newUser = await prisma.user.create({
+            data: {
+            userName: formData['usernameInput'],
+            password: formData['passwordInput'],
+            role: formData['roleInput']
+            },
+        });
+        if(newUser != undefined) {
+            console.log('User authenticated');
+            req.session.regenerate(function (err) {
+                if (err) next(err)
+            
+                req.session.user = newUser;
+            
+                req.session.save(function (err) {
+                if (err) return next(err)
+                console.log('Session saved'); 
+                res.redirect('/')
+            })
+        })
+      }
     } catch (error) {
       console.error('Error (skapa):', error);
       res.status(500).send('Error (skapa)');
@@ -80,7 +91,7 @@ app.post('/signIn', express.urlencoded({ extended: false }), async(req, res) => 
                   console.log('Session saved'); 
                   res.redirect('/')
                 })
-              })
+            })
         }
     }
     catch (error) {
@@ -92,14 +103,14 @@ app.get('/', isAuthenticated, (req, res) => {
     res.sendFile(__dirname + '/html/index.html');
     //signedIn ? res.sendFile(__dirname + '/html/index.html') : res.redirect('/signIn.html')
 });
-app.get('/signIn.html', (req, res) => {
+app.get('/signIn', (req, res) => {
     res.sendFile(__dirname + '/html/signIn.html');
 });
-app.get('/signUp.html', (req, res) => {
+app.get('/signUp', (req, res) => {
     res.sendFile(__dirname + '/html/signUp.html');
 });
-app.get('/post.html', (req, res) => {
-    res.sendFile(__dirname + '/html/post.html');
+app.get('/admin', (req, res) => {
+    res.sendFile(__dirname + '/html/admin.html');
 });
 
 app.get('/signOut', (req, res) => {
