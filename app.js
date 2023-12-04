@@ -100,6 +100,11 @@ app.post('/signIn', express.urlencoded({ extended: false }), async(req, res) => 
     }
 });
 
+app.get('/postViewer', async (req,res)=>{
+    const viewPost = await prisma.user.findMany();
+    res.json(viewPost);
+});
+
 app.post('/createPost', upload.single('image'), express.urlencoded({ extended: false }), async (req, res) => {
     console.log(req.body);
     const formData = req.body;
