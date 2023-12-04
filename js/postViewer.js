@@ -1,3 +1,12 @@
+fetch('/isAdmin', { method: 'GET' })
+  .then(response => response.json())
+  .then(data => {
+    isAdmin(data);
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
+
 fetch('/postViewer', { method: 'GET' })
   .then(response => response.json())
   .then(data => {
@@ -7,7 +16,16 @@ fetch('/postViewer', { method: 'GET' })
     console.error('Error:', error);
   });
 
+const adminBtn = document.getElementById('adminLink');
+adminBtn.style.display = "none";
+const isAdmin = (annswer) => {
+  if (annswer === 'Admin') {
+    adminBtn.style.display = "inline";
+  }
+}
+
 const postViewer = (data) => {
+  console.log(data)
     data.forEach(post => {
         const outerContainer = document.getElementById('postContainer');
         const card = document.createElement('div');
@@ -18,11 +36,12 @@ const postViewer = (data) => {
         const smallText = document.createElement('small');
         const postImage = document.createElement('img');
 
+        postContent.style = 'white-space: pre-line;';
         postImage.src = './uploads/' + post.image;
-        postImage.alt = 'Post Image';
-        postImage.style = "min-height: 288px;";
+        postImage.alt = 'Post Image'; 
+        postImage.style = "max-height:500px;";
 
-        card.classList.add('card');
+        card.classList.add('card', 'm-5');
         postBody.classList.add('card-body');
         postTitle.classList.add('card-title');
         postContent.classList.add('card-text');
@@ -33,7 +52,7 @@ const postViewer = (data) => {
 
         postTitle.textContent = `${post.title}`;
         postContent.textContent = `${post.content}`;
-        smallText.textContent = `${post.createdAt.split(' ')[0]}`;
+        smallText.textContent = `${post.createdAt.split('T')[0]}`;
 
         outerContainer.appendChild(card);
 

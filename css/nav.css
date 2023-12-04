@@ -1,0 +1,8 @@
+a{
+    transition: 100ms ease-in-out;
+    text-align: center;
+}
+a:hover {
+    border-bottom: 2px black solid;
+    letter-spacing: 0.2em;
+}

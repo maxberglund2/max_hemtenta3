@@ -100,8 +100,12 @@ app.post('/signIn', express.urlencoded({ extended: false }), async(req, res) => 
     }
 });
 
+app.get('/isAdmin', async (req,res)=>{
+    res.json(req.session.user.role);
+});
+
 app.get('/postViewer', async (req,res)=>{
-    const viewPost = await prisma.user.findMany();
+    const viewPost = await prisma.post.findMany();
     res.json(viewPost);
 });
 
