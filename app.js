@@ -149,7 +149,7 @@ app.get('/signIn', (req, res) => {
 app.get('/signUp', (req, res) => {
     res.sendFile(__dirname + '/html/signUp.html');
 });
-app.get('/admin', (req, res) => {
+app.get('/admin', isAuthenticated, (req, res) => {
     // looks if current user is admin, if not sends you back to home page
     req.session.user.role === 'Admin' ? res.sendFile(__dirname + '/html/admin.html'): res.redirect('/');
 });
