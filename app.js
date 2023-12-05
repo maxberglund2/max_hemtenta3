@@ -1,11 +1,10 @@
 const pathToModules = "./other-backend/node_modules/"
 
+// get access to packages
 const { PrismaClient } = require( pathToModules + '@prisma/client')
 const express = require(pathToModules + 'express');
 const multer = require(pathToModules + 'multer');
 const session = require(pathToModules + 'express-session');
-
-const url = require('url');
 
 const prisma = new PrismaClient()
 const app = express();
@@ -16,6 +15,7 @@ async function main() {
 
 }
 
+// connect to prisma DB
 main()
   .then(async () => {
     await prisma.$disconnect()
@@ -28,21 +28,28 @@ main()
 
 app.use(express.static(__dirname));
 
+
+// Activate Session
 app.use(session({
     secret: 'keyboard cat',
     resave: false,
     saveUninitialized: true
 }))
-function isAuthenticated (req, res, next) {
+
+app.use(express.urlencoded({ extended: true }));
+
+// a function checks if you are Authenticated, if not it will send you to sign in page
+const isAuthenticated = (req, res, next) => {
     if (req.session.user) next()
     else res.redirect('/signIn')
 }
 
-app.post('/signUp', express.urlencoded({ extended: false }), async (req, res) => {
-    console.log(req.body);
+// When user tries to sign up
+app.post('/signUp', async (req, res) => {
     const formData = req.body;
 
     try {
+        // creates new user into DB with prisma
         const newUser = await prisma.user.create({
             data: {
             userName: formData['usernameInput'],
@@ -50,17 +57,17 @@ app.post('/signUp', express.urlencoded({ extended: false }), async (req, res) =>
             role: formData['roleInput']
             },
         });
+
+        // if the user is created (not undefined) this tell session that user is authenticated
         if(newUser != undefined) {
-            console.log('User authenticated');
             req.session.regenerate(function (err) {
                 if (err) next(err)
             
                 req.session.user = newUser;
             
                 req.session.save(function (err) {
-                if (err) return next(err)
-                console.log('Session saved'); 
-                res.redirect('/')
+                if (err) return next(err);
+                res.redirect('/');
             })
         })
       }
@@ -69,18 +76,21 @@ app.post('/signUp', express.urlencoded({ extended: false }), async (req, res) =>
       res.status(500).send('Error (skapa)');
     }
 });
-app.post('/signIn', express.urlencoded({ extended: false }), async(req, res) => {
+
+// when user tries to sign in
+app.post('/signIn', async(req, res) => {
     const formData = req.body;
-    console.log(formData)
 
     try {
+        // compares entered username in the input with all users
         const user = await prisma.user.findUnique({
             where: {
                 userName: formData['usernameInput']
             }
         })
+        // if the user was found and the password input is the same as users password
         if (user && user.password === formData['passwordInput']) {
-            console.log('User authenticated');
+            // tells session that user is authenticated
             req.session.regenerate(function (err) {
                 if (err) next(err)
             
@@ -88,8 +98,7 @@ app.post('/signIn', express.urlencoded({ extended: false }), async(req, res) => 
             
                 req.session.save(function (err) {
                   if (err) return next(err)
-                  console.log('Session saved'); 
-                  res.redirect('/')
+                  res.redirect('/');
                 })
             })
         }
@@ -100,17 +109,19 @@ app.post('/signIn', express.urlencoded({ extended: false }), async(req, res) => 
     }
 });
 
+// sends a response to a js that tells if the currents user is admin or not
 app.get('/isAdmin', async (req,res)=>{
     res.json(req.session.user.role);
 });
 
+// sends data of post table to js file
 app.get('/postViewer', async (req,res)=>{
     const viewPost = await prisma.post.findMany();
     res.json(viewPost);
 });
 
-app.post('/createPost', upload.single('image'), express.urlencoded({ extended: false }), async (req, res) => {
-    console.log(req.body);
+// when admin creates "post"
+app.post('/createPost', upload.single('image'), async (req, res) => {
     const formData = req.body;
     try {
         const newPost = await prisma.post.create({
@@ -128,6 +139,7 @@ app.post('/createPost', upload.single('image'), express.urlencoded({ extended: f
     }
 });
 
+// routing
 app.get('/', isAuthenticated, (req, res) => {
     res.sendFile(__dirname + '/html/index.html');
 });
@@ -138,9 +150,11 @@ app.get('/signUp', (req, res) => {
     res.sendFile(__dirname + '/html/signUp.html');
 });
 app.get('/admin', (req, res) => {
+    // looks if current user is admin, if not sends you back to home page
     req.session.user.role === 'Admin' ? res.sendFile(__dirname + '/html/admin.html'): res.redirect('/');
 });
 
+// when sign out button is pressed
 app.get('/signOut', (req, res) => {
     req.session.user = null
     req.session.save(function (err) {
@@ -152,6 +166,7 @@ app.get('/signOut', (req, res) => {
     })
 });
 
+// server's port connection
 app.listen(port, () => {
     console.log(`Server is listening at http://localhost:${port}`);
 });
